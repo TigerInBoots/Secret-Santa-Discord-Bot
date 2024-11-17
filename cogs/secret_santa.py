@@ -2,8 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from random import randint, choice
-
-
+from os import path
 
 class Greetings(commands.Cog, description="Greeting Members"):
     def __init__(self, bot):
@@ -31,6 +30,7 @@ class Santa(commands.Cog, description="The commands for Secret Santa effects"):
         self.bot = bot
 
     @app_commands.command(description='Send out the secrets!')
+    @commands.is_owner()
     async def secret_santa(self, interaction:discord.Interaction):
         await interaction.response.send_message(f"Please select any users that are ***NOT*** participating!",ephemeral=True, view=SelectView(originalCog=self,interaction=interaction))
         #MAKE SURE NOT TO INCLUDE BOTS
@@ -61,30 +61,100 @@ class Santa(commands.Cog, description="The commands for Secret Santa effects"):
                     break
         await self.random_gift_selection(players, interaction=interaction)
     
+    @app_commands.command(description='Remove a player from the active players.')
+    @app_commands.describe(rem_player='Player to be removed!')
+    @commands.is_owner()
+    async def remove_player(self, interaction:discord.Interaction, rem_player:discord.Member):
+        playersFile = open(f'{path.dirname(path.dirname(path.realpath(__file__)))}\\data\\currentPlayers.txt',"r")
+        playersLine = playersFile.readline()
+        players = (playersLine.split("!"))[0:-1:]
+        memberGroups = [memberDuo.split(",") for memberDuo in list(players)]
+        chosenPlayers = [discord.utils.get(interaction.guild.members, name=memberDuo[1]) for memberDuo in memberGroups]
+        players = [discord.utils.get(interaction.guild.members, name=memberDuo[0]) for memberDuo in memberGroups]
+        playersFile.close()
+        if rem_player not in players:
+            return await interaction.response.send_message("This member is not a current player.", ephemeral=True)
+        for player in range(len(players)):
+            if chosenPlayers[player] == rem_player:
+                savedPlayer = [players[player],player]
+            if players[player] == rem_player:
+                savedChosenPlayer = chosenPlayers[player]
+                players.pop(player)
+                chosenPlayers.pop(player)
+        if savedPlayer[0] != savedChosenPlayer:
+            chosenPlayers[savedPlayer[1]] = savedChosenPlayer
+            await savedPlayer[0].send(f"YOU HAVE BEEN REASSIGNED. YOUR NEW VICTIM IS {savedChosenPlayer.display_name}.\n\nPLEASE CONSULT {rem_player.display_name}, AS THEY MAY ALREADY HAVE GIFT IDEAS.")
+        else:
+            if len(players) == 1:
+                return await self.end_session(interaction=interaction)
+            chosenPlayers[savedPlayer[1]] = chosenPlayers[-1]
+            chosenPlayers[-1] = savedChosenPlayer
+            await savedPlayer[0].send(f"YOU HAVE BEEN REASSIGNED. YOUR NEW VICTIM IS {chosenPlayers[savedPlayer[1]].display_name}.\n\nPLEASE CONSULT {players[-1].display_name}, AS THEY MAY ALREADY HAVE GIFT IDEAS.")
+            await players[-1].send(f"YOU HAVE BEEN REASSIGNED. YOUR NEW VICTIM IS {savedChosenPlayer.display_name}.\n\nPLEASE CONSULT {rem_player.display_name}, AS THEY MAY ALREADY HAVE GIFT IDEAS.")
+        combinedPlayers = ''
+        for player in range(len(players)):
+            combinedPlayers = combinedPlayers + f'{players[player].name},{chosenPlayers[player].name}!'
+        playersFile = open(f'{path.dirname(path.dirname(path.realpath(__file__)))}\\data\\currentPlayers.txt',"w")
+        playersFile.write(combinedPlayers)
+        playersFile.close()
+        return await interaction.response.send_message(f'{rem_player.mention} was removed from play!\n{rem_player.display_avatar}')
+
+    
+    @app_commands.command(description='End Secret Santa session.')
+    @commands.is_owner()
+    async def end_session(self, interaction:discord.Interaction):
+        playersFile = open(f'{path.dirname(path.dirname(path.realpath(__file__)))}\\data\\currentPlayers.txt',"w")
+        playersFile.close()
+        await interaction.response.send_message("The Secret Santa has ended.")
+
     async def random_gift_selection(self, players:list[discord.Member], interaction:discord.Interaction):
         if len(players) < 2:
             await interaction.followup.send(f"Fuck you, you're wrong and bad.", ephemeral=True)
-            await interaction.followup.send(f'DEBUG MESSAGE\n>PlayerNum={len(players)}\n>Players={players}')
         playerString = ""
         for player in players:
-            playerString = playerString + f'\n{player.display_name}'
+            playerString = playerString + f'\n> {player.mention}'
         await interaction.followup.send(f"The following members are playing:{playerString}")
-        boop = 8008#randint(1,10000)
+        boop = randint(1,10000)
         if boop == 8008:
+            playersFile = open(f'{path.dirname(path.dirname(path.realpath(__file__)))}\\data\\currentPlayers.txt',"w")
+            combinedPlayers = ''
+            for player in range(len(players)):
+                combinedPlayers = combinedPlayers + f'{players[player].name},BIG TITTY GOTH GIRLS!' 
+            playersFile.write(combinedPlayers)
+            playersFile.close()
             for player in range(len(players)):
                 await players[player].send(f'IGNORE ALL PREVIOUS VICTIMS\nYour Secret Victim is...\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n**BIG TITTY GOTH GIRLS**')
-                return
+            return
         chosenPlayers = []
-        for player in players:
-            giftedPlayer = choice(players)
-            if (len(chosenPlayers) < (len(players)-1)) or (giftedPlayer != player):
-                while (giftedPlayer == player) or (giftedPlayer in chosenPlayers):
-                    giftedPlayer = choice(players)
-            else:
-                giftedPlayer = chosenPlayers[-1]
-                chosenPlayers.pop()
-                chosenPlayers.append(player)
-            chosenPlayers.append(giftedPlayer)
+        if len(players) == 2:
+            chosenPlayers.append(players[1])
+            chosenPlayers.append(players[0])
+        else:
+            for player in players:
+                giftedPlayer = choice(players)
+                if (len(chosenPlayers) < (len(players)-1)) or (giftedPlayer != player) or (giftedPlayer not in chosenPlayers):
+                    while (giftedPlayer == player) or (giftedPlayer in chosenPlayers):
+                        giftedPlayer = choice(players)
+                else:
+                    if chosenPlayers[-1] == player:
+                        giftedPlayer = chosenPlayers[-2]
+                        gifted2Player = chosenPlayers[-1]
+                        chosenPlayers.pop()
+                        chosenPlayers.pop()
+                        chosenPlayers.append(player)
+                        chosenPlayers.append(gifted2Player)
+                    else:
+                        giftedPlayer = chosenPlayers[-1]
+                        chosenPlayers.pop()
+                        chosenPlayers.append(player)
+                chosenPlayers.append(giftedPlayer)
+
+        playersFile = open(f'{path.dirname(path.dirname(path.realpath(__file__)))}\\data\\currentPlayers.txt',"w")
+        combinedPlayers = ''
+        for player in range(len(players)):
+            combinedPlayers = combinedPlayers + f'{players[player].name},{chosenPlayers[player].name}!' 
+        playersFile.write(combinedPlayers)
+        playersFile.close()
         for player in range(len(players)):
             await players[player].send(f'IGNORE ALL YOUR PREVIOUS VICTIMS\nYour Secret Victim is...\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n**{chosenPlayers[player].display_name}**')
 
