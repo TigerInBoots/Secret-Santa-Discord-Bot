@@ -25,8 +25,9 @@ async def quit(ctx):
 
 @boi.command(hidden=True)
 @cmds.is_owner()
-async def reload(ctx):
+async def reload(ctx:cmds.Context):
     await boi.reload_extension(f'cogs.secret_santa')
+    await ctx.send("Secret Santa Reloaded", ephemeral=True)
 
 #This is for the example purposes only and should only be used for debugging
 @boi.command()
