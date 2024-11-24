@@ -1,4 +1,4 @@
-# The Naughty Boi Bot
+# The Secret Santa Discord Bot
 ## Current Commands:
 ### Greetings:
 #### on_member_join (listener)
