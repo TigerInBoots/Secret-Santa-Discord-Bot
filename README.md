@@ -1,11 +1,5 @@
 # The Secret Santa Discord Bot
 ## Current Commands:
-### Greetings:
-#### on_member_join (listener)
-When a new member joins the guild, messages the system channel with "Sup, @{member.name}".
-#### hello
-Slash command to send a member (default is yourself) the message "Fuck you {member.name}~". 
-If the command is used on the same member more than once, in a row, sends "Sup {member.name}... This feels familiar." instead.
 ### Secret Santa:
 These commands are for the purpose of determining the players of a Secret Santa, within a server.
 #### secret_santa
