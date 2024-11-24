@@ -4,7 +4,7 @@ from discord import app_commands
 from random import randint, choice
 from os import path
 
-class Greetings(commands.Cog, description="Greeting Members"):
+'''class Greetings(commands.Cog, description="Greeting Members"):
     def __init__(self, bot):
         self.bot = bot
         self._last_member = None
@@ -24,7 +24,7 @@ class Greetings(commands.Cog, description="Greeting Members"):
         else:
             await interaction.response.send_message(f'Sup {member.name}... This feels familiar.')
         self._last_member = member
-
+'''
 class Santa(commands.Cog, description="The commands for Secret Santa effects"):
     def __init__(self, bot):
         self.bot = bot
